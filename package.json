@@ -1,0 +1,25 @@
+{
+  "name": "bing",
+  "version": "1.0.0",
+  "description": "An application to gather points for Bing.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "chrome-cookies-secure": "^1.1.9",
+    "cookie-parser": "^1.4.4",
+    "jsdom-quokka-plugin": "^1.0.14",
+    "quokka-jquery-loader": "0.0.3",
+    "request-promise-native": "^1.0.7",
+    "int": "^0.2.0",
+    "sqlite3": "^4.0.6",
+    "tldjs": "^1.5.1",
+    "tough-cookie": "^2.3.4",
+    "keytar": "^4.2.1"
+  }
+}
