@@ -1,9 +1,10 @@
 const rp = require("request-promise-native");
 const baseUrl = "https://www.bing.com";
-const cheerio = require('cheerio');
 const words = require('an-array-of-english-words');
 const questionWords = ["What", "When", "Why", "How", "Who"];
 const maxWord = words.length;
+const appPath = `${process.env.HOME}/.bing`;
+const usedPath = `${appPath}/used-sentences.js`;
 const fs = require("fs");
 var userAgents = {
     mobile: {
@@ -29,50 +30,61 @@ var cvid;
 var iid;
 var bingCookies;
 var agentUserHeader;
-var usedSentences;
+var sentences;
 
 async function getBingDotCom() {
     try {
         let options = {
             method: "GET",
-            uri: baseUrl,
-            transform: function (body) {
-                return cheerio.load(body);
-            }
+            uri: baseUrl
         };
 
-        return await rp(options);
+        return (await rp(options));
+
     } catch (error) {
         console.log("An error occurred while trying to reach www.bing.com", error);
     }
 }
 
-function setCookies(cookies) {
-    bingCookies = cookies;
+async function setCookies() {
+    try {
+        if (fs.existsSync(`${appPath}/cookie`)) {
+            bingCookies = fs.readFileSync(`${appPath}/cookie`);
+        }
+    } catch (error) {
+        console.log("Error setCookies(): ", error);
+    }
 }
 
 function setAgent(type) {
     agentUserHeader = userAgents[type].agent
 }
 
-function getPageAttributes($) {
-    let element = $("#nc_iid")[0];
+function getWindow(page) {
+    try {
+        const jsdom = require("jsdom");
+        const {
+            JSDOM
+        } = jsdom;
 
-    if (element) {
-        return element.attribs;
-    } else {
-        return {
-            "_ig": cvid,
-            "_iid": iid
-        }
+        const dom = new JSDOM(page, {
+            runScripts: "dangerously"
+        });
+
+
+        return dom.window;
+    } catch (error) {
+        console.log("Error getWindow(): ", error);
     }
 }
 
-async function setPageAttributes($) {
-    let attributes = getPageAttributes($);
+function getPageAttributes(window) {
+    return window._G;
+}
 
-    cvid = attributes["_ig"];
-    iid = attributes["_iid"];
+async function setPageAttributes(globals) {
+    cvid = globals._ig;
+    iid = globals.iid;
 }
 
 function getNewSentence() {
@@ -87,12 +99,12 @@ function getNewSentence() {
 }
 
 function setSentences() {
-   usedSentences = fs.existsSync("./sentences.js") ? fs.readFileSync("sentences.js", "utf8").split(",") : [];
+    sentences = fs.existsSync(usedPath) ? fs.readFileSync(usedPath, "utf8").split(",") : [];
 }
 
 function setNewSentences() {
     try {
-        fs.writeFileSync("./sentences.js", usedSentences);
+        fs.writeFileSync(usedPath, sentences);
     } catch (error) {
         console.log("setNewSentences: ", error);
     }
@@ -160,7 +172,8 @@ async function setRewardsHeader() {
 }
 
 async function makeSearchRequest(query) {
-    let sentence = encodeURI(query);
+    let sentence = query ? encodeURI(query) : "";
+
     try {
         let searchURI = `${baseUrl}/search`;
         let options = {
@@ -184,19 +197,16 @@ async function makeSearchRequest(query) {
                 origin: `${baseUrl}`,
                 "user-agent": agentUserHeader,
                 referer: `${baseUrl}/?FORM=Z9FD1`
-            },
-            transform: function (body) {
-                return cheerio.load(body);
             }
         };
 
-        let $ = await rp(options);
+        let attributes = getPageAttributes(getWindow(await rp(options)));
 
-        await reportActivity(getPageAttributes($), sentence, searchURI);
-        if (usedSentences.includes(sentence)) {
-            usedSentences.push(sentence + "(DUPLICATE)");
+        await reportActivity(attributes, sentence, searchURI);
+        if (sentences.includes(sentence)) {
+            sentences.push(sentence + "(DUPLICATE)");
         } else {
-            usedSentences.push(sentence);
+            sentences.push(sentence);
         }
 
     } catch (error) {
@@ -239,47 +249,54 @@ async function reportActivity(attributes, sentence, searchURI) {
 }
 
 async function setup() {
-    setSentences();
-    let page = await getBingDotCom();
-    await setPageAttributes(page);
-    await setHeadersBing();
-    await setRewardsHeader();
+    try {
+        await setCookies();
+        let attributes = getPageAttributes(getWindow(await getBingDotCom()));
+        setPageAttributes(attributes);
+        setSentences();
+        await setHeadersBing();
+        await setRewardsHeader();
+    } catch (error) {
+        console.log("Error", error);
+    }
 }
 
 async function run() {
-    let min = 1734;
-    let max = 8303;
-    let interval = (Math.random() * (max - min) + min);
+    try {
+        let min = 1734;
+        let max = 8303;
+        let interval = (Math.random() * (max - min) + min);
 
-    const timer = setInterval(async () => {
-        let dailyCount = (userAgents.mobile.count + userAgents.pc.count + userAgents.edge.count);
+        const timer = setInterval(async () => {
+            let dailyCount = (userAgents.mobile.count + userAgents.pc.count + userAgents.edge.count);
 
-        if (dailyCount >= dailyLimit) {
-            clearInterval(timer);
-            setNewSentences();
-            console.log("Done for the day!");
-        } else {
-            let sentence = getNewSentence();
-            if (userAgents.mobile.count < userAgents.mobile.limit) {
-                userAgents.mobile.count++;
-                setAgent("mobile");
-            } else if (userAgents.pc.count < userAgents.pc.limit) {
-                setAgent("pc");
-                userAgents.pc.count++;
-            } else if (userAgents.edge.count < userAgents.edge.limit) {
-                userAgents.edge.count++;
-                setAgent("edge");
+            if (dailyCount >= dailyLimit) {
+                clearInterval(timer);
+                setNewSentences();
+                console.log("Done for the day!");
+            } else {
+                let sentence = getNewSentence();
+                if (userAgents.mobile.count < userAgents.mobile.limit) {
+                    userAgents.mobile.count++;
+                    setAgent("mobile");
+                } else if (userAgents.pc.count < userAgents.pc.limit) {
+                    setAgent("pc");
+                    userAgents.pc.count++;
+                } else if (userAgents.edge.count < userAgents.edge.limit) {
+                    userAgents.edge.count++;
+                    setAgent("edge");
+                }
+
+                await makeSearchRequest(sentence);
+                console.log("Mobile: ", userAgents.mobile.count, "Edge: ", userAgents.edge.count, "PC", userAgents.pc.count, "Total: ", dailyCount + 1);
             }
+        }, interval);
+    } catch (error) {
 
-            await makeSearchRequest(sentence);
-            console.log("Mobile: ", userAgents.mobile.count, "Edge: ", userAgents.edge.count, "PC", userAgents.pc.count, "Total: ", dailyCount + 1);
-        }
-    }, interval);
+    }
 }
 
 module.exports = {
-    setCookies: setCookies,
-    setAgent: setAgent,
     setup: setup,
     run: run
 };
