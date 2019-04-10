@@ -1,0 +1,10 @@
+language: node_js
+node_js:
+  - v10
+  - v9
+jobs:  
+include:
+ stage: build
+   before_script:
+    - npm install -g pkg
+   script: "pkg ."
