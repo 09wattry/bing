@@ -3,7 +3,9 @@ const baseUrl = "https://www.bing.com";
 const words = require('an-array-of-english-words');
 const questionWords = ["What", "When", "Why", "How", "Who"];
 const maxWord = words.length;
-const appPath = `${process.env.HOME}/.bing`;
+const os = require("os");
+const homedir = os.homedir();
+const appPath = `${homedir}/.bing`;
 const usedPath = `${appPath}/used-sentences.js`;
 const fs = require("fs");
 var userAgents = {
@@ -182,7 +184,7 @@ async function makeSearchRequest(query) {
             qs: {
                 q: sentence,
                 qs: "n",
-                form: "QBLH",
+                form: (agentUserHeader.match("Mobile")) ? "QBRE" : "QBLH",
                 sp: -1,
                 pq: sentence,
                 sc: "8-4",
