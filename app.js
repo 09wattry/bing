@@ -51,7 +51,7 @@ async function getBingDotCom() {
 async function setCookies() {
     try {
         if (fs.existsSync(`${appPath}/cookie`)) {
-            bingCookies = fs.readFileSync(`${appPath}/cookie`);
+            bingCookies = fs.readFileSync(`${appPath}/cookie`, "utf8");
         }
     } catch (error) {
         console.log("Error setCookies(): ", error);
@@ -72,7 +72,6 @@ function getWindow(page) {
         const dom = new JSDOM(page, {
             runScripts: "dangerously"
         });
-
 
         return dom.window;
     } catch (error) {
@@ -129,7 +128,7 @@ async function setHeadersBing() {
                 "Content-Type": "application/x-www-form-urlencoded",
                 cookie: bingCookies,
                 origin: `${baseUrl}`,
-                referer: baseUrl + "/?FORM=Z9FD1",
+                referer: baseUrl + "/?FORM=QBRE",
                 "user-agent": agentUserHeader
             },
             body: JSON.stringify({
@@ -187,7 +186,7 @@ async function makeSearchRequest(query) {
                 form: (agentUserHeader.match("Mobile")) ? "QBRE" : "QBLH",
                 sp: -1,
                 pq: sentence,
-                sc: "8-4",
+                sc: "8",
                 sk: "",
                 cvid: cvid
             },
@@ -198,7 +197,7 @@ async function makeSearchRequest(query) {
                 cookie: bingCookies,
                 origin: `${baseUrl}`,
                 "user-agent": agentUserHeader,
-                referer: `${baseUrl}/?FORM=Z9FD1`
+                referer: `${baseUrl}/?FORM=QBRE`
             }
         };
 
@@ -250,6 +249,9 @@ async function reportActivity(attributes, sentence, searchURI) {
     }
 }
 
+// setup().then(()=> {
+
+// }).catch(()=> {})
 async function setup() {
     try {
         await setCookies();
