@@ -50,8 +50,8 @@ async function getBingDotCom() {
 
 async function setCookies() {
     try {
-        if (fs.existsSync(`${appPath}/cookie`)) {
-            bingCookies = fs.readFileSync(`${appPath}/cookie`, "utf8");
+        if (fs.existsSync(`${appPath}/cookie.txt`)) {
+            bingCookies = fs.readFileSync(`${appPath}/cookie.txt`, "utf8");
         }
     } catch (error) {
         console.log("Error setCookies(): ", error);
