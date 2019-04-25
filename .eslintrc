@@ -1,0 +1,29 @@
+{
+  "env": {
+    "es6": true,
+    "browser": false,
+    "node": true,
+    "jest/globals": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "airbnb",
+    "plugin:prettier/recommended",
+    "plugin:jest/recommended"
+  ],
+  "plugins": ["extra-rules",
+    "jest"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 2018
+  },
+  "rules": {
+    "prettier/prettier": "error",
+    "func-names": ["error", "never"],
+    "extra-rules/no-commented-out-code": "error",
+    "no-underscore-dangle": 1,
+    "no-use-before-define": ["error", {
+      "functions": false
+    }]
+  }
+}

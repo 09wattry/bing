@@ -1,7 +1,10 @@
-const app = require("./app");
-try {
-    app.setup();
-    app.run();
-} catch (error) {
-    console.log("An error occurred while making the request:", error);
-}
+const { setup, logger } = require("./app");
+
+setup()
+  .then(() => {})
+  .catch(error => {
+    logger.info(
+      "An error occurred while making setting up and running the application:",
+      error
+    );
+  });
