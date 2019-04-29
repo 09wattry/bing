@@ -1,19 +1,18 @@
 const rp = require("request-promise-native");
 const jsdom = require("jsdom");
-
-const { JSDOM } = jsdom;
-const baseUrl = "https://www.bing.com";
+const fs = require("fs");
 const words = require("an-array-of-english-words");
+const dotenvExpand = require("dotenv-expand");
+const { createLogger, format, transports } = require("winston");
 
+dotenvExpand(require("dotenv").config());
+
+const baseUrl = process.env.BASE_URL;
+const configPath = process.env.CONFIG_PATH;
+const cookiePath = `${configPath}/${process.env.COOKIE_NAME}`;
+const usedPath = process.env.USED_SENTENCES_FILE_PATH;
 const questionWords = ["What", "When", "Why", "How", "Who"];
 const maxWord = words.length;
-const os = require("os");
-
-const homedir = os.homedir();
-const appPath = `${homedir}/.bing`;
-const usedPath = `${appPath}/used-sentences.js`;
-const fs = require("fs");
-const { createLogger, format, transports } = require("winston");
 
 const logger = createLogger({
   level: "info",
@@ -74,8 +73,8 @@ async function getBingDotCom() {
 
 function setCookies() {
   try {
-    if (fs.existsSync(`${appPath}/cookie`)) {
-      bingCookies = fs.readFileSync(`${appPath}/cookie`, "utf8");
+    if (fs.existsSync(cookiePath)) {
+      bingCookies = fs.readFileSync(cookiePath, "utf8");
     }
   } catch (error) {
     logger.info("Error setCookies(): ", error);
@@ -88,6 +87,7 @@ function setAgent(type) {
 
 function getWindow(page) {
   try {
+    const { JSDOM } = jsdom;
     const virtualConsole = new jsdom.VirtualConsole();
     const { window } = new JSDOM(page, {
       virtualConsole,
@@ -155,7 +155,7 @@ async function setHeadersBing() {
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
         cookie: bingCookies,
-        origin: `${baseUrl}`,
+        origin: baseUrl,
         referer: `${baseUrl}/?FORM=QBRE`,
         "user-agent": agentUserHeader
       },
@@ -185,12 +185,12 @@ async function setRewardsHeader() {
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
         cookie: bingCookies,
-        origin: `${baseUrl}`,
+        origin: baseUrl,
         referer: `${baseUrl}/?FORM=Z9FD1`,
         "user-agent": agentUserHeader
       },
       body: JSON.stringify({
-        url: "https://www.bing.com/",
+        url: baseUrl,
         V: "web"
       })
     };
@@ -223,7 +223,7 @@ async function makeSearchRequest(query) {
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
         cookie: bingCookies,
-        origin: `${baseUrl}`,
+        origin: baseUrl,
         "user-agent": agentUserHeader,
         referer: `${baseUrl}/?FORM=QBRE`
       }
@@ -266,7 +266,7 @@ async function reportActivity(attributes, sentence, searchURI) {
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
         cookie: bingCookies,
-        origin: `${baseUrl}`,
+        origin: baseUrl,
         referer: searchURI,
         "user-agent": agentUserHeader
       }
@@ -286,7 +286,6 @@ async function setup() {
     await setGlobalAttributes();
     await setHeadersBing();
     await setRewardsHeader();
-    await run();
   } catch (error) {
     logger.info("Error", error);
   }
@@ -336,5 +335,6 @@ async function run() {
 
 module.exports = {
   setup,
-  logger
+  logger,
+  run
 };
