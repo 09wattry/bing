@@ -2,22 +2,43 @@
   "name": "bing",
   "version": "1.0.0",
   "description": "An application to gather points for Bing.",
-  "main": "index.js",
   "bin": "./bin.js",
   "scripts": {
-    "start": "node app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node bin.js",
+    "precommit": "npm run lint-fix",
+    "postcommit": "pkg .",
+    "lint": "eslint .",
+    "lint-fix": "eslint . --fix",
+    "test": "jest"
   },
   "author": "Ryan Wattrus",
   "license": "ISC",
   "dependencies": {
     "an-array-of-english-words": "^1.3.1",
+    "chrome-cookies-secure": "^1.2.0",
+    "dotenv": "^7.0.0",
+    "dotenv-expand": "^5.1.0",
     "jquery": "^3.4.0",
     "jsdom": "^14.0.0",
+    "moment": "^2.24.0",
     "request-promise-native": "^1.0.7",
+    "tough-cookie": "^3.0.1",
     "winston": "^3.2.1"
   },
   "devDependencies": {
-    "pkg": "^4.3.7"
+    "coveralls": "^3.0.3",
+    "eslint": "^5.16.0",
+    "eslint-config-airbnb": "^17.1.0",
+    "eslint-config-prettier": "^4.1.0",
+    "eslint-plugin-extra-rules": "0.0.0-development",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-jest": "^22.4.1",
+    "eslint-plugin-jsx-a11y": "^6.2.1",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint-plugin-react": "^7.12.4",
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.5",
+    "pkg": "^4.3.7",
+    "prettier": "^1.17.0"
   }
 }

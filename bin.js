@@ -1,7 +1,9 @@
-const { setup, logger } = require("./app");
+const { setup, logger, run } = require("./app");
 
 setup()
-  .then(() => {})
+  .then(() => {
+    run();
+  })
   .catch(error => {
     logger.info(
       "An error occurred while making setting up and running the application:",
