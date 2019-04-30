@@ -1,19 +1,22 @@
 const rp = require("request-promise-native");
 const jsdom = require("jsdom");
-
-const { JSDOM } = jsdom;
-const baseUrl = "https://www.bing.com";
+const fs = require("fs");
 const words = require("an-array-of-english-words");
+const dotenvExpand = require("dotenv-expand");
+const { createLogger, format, transports } = require("winston");
+const {
+  getChromeCookies,
+  updateChromeCookies
+} = require("./cookie-handler.js");
 
+dotenvExpand(require("dotenv").config());
+
+const baseUrl = process.env.BASE_URL;
+const configPath = process.env.CONFIG_PATH;
+const cookiePath = `${configPath}/${process.env.COOKIE_FILE_NAME}`;
+const usedPath = process.env.USED_SENTENCES_FILE_PATH;
 const questionWords = ["What", "When", "Why", "How", "Who"];
 const maxWord = words.length;
-const os = require("os");
-
-const homedir = os.homedir();
-const appPath = `${homedir}/.bing`;
-const usedPath = `${appPath}/used-sentences.js`;
-const fs = require("fs");
-const { createLogger, format, transports } = require("winston");
 
 const logger = createLogger({
   level: "info",
@@ -54,7 +57,7 @@ const dailyLimit =
 let globals = {};
 let cvid;
 let iid;
-let bingCookies;
+let cookies;
 let agentUserHeader;
 let sentences;
 
@@ -72,10 +75,14 @@ async function getBingDotCom() {
   return undefined;
 }
 
-function setCookies() {
+async function setCookies() {
   try {
-    if (fs.existsSync(`${appPath}/cookie`)) {
-      bingCookies = fs.readFileSync(`${appPath}/cookie`, "utf8");
+    if (process.env.MODE === "remote") {
+      cookies = fs.readFileSync(cookiePath, "utf8");
+    } else {
+      cookies = await getChromeCookies();
+
+      updateChromeCookies(cookies);
     }
   } catch (error) {
     logger.info("Error setCookies(): ", error);
@@ -88,6 +95,7 @@ function setAgent(type) {
 
 function getWindow(page) {
   try {
+    const { JSDOM } = jsdom;
     const virtualConsole = new jsdom.VirtualConsole();
     const { window } = new JSDOM(page, {
       virtualConsole,
@@ -108,32 +116,49 @@ function getPageAttributes(window) {
 }
 
 async function setGlobalAttributes() {
-  const page = await getBingDotCom();
-  const window = await getWindow(page);
+  try {
+    const page = await getBingDotCom();
+    const window = await getWindow(page);
 
-  globals = await getPageAttributes(window);
+    globals = await getPageAttributes(window);
+  } catch (error) {
+    logger.info(`Unable to set global attributes: ${error}`);
+  }
 }
 
 function getNewSentence() {
-  const qWord = questionWords[Math.floor(Math.random() * questionWords.length)];
-  let sentence = qWord;
-  for (let i = 0; i < Math.floor(Math.random() * (10 - 1) + 1); i += 1) {
-    const random = Math.floor(Math.random() * maxWord);
-    sentence += ` ${words[random]}`;
-  }
+  try {
+    const qWord =
+      questionWords[Math.floor(Math.random() * questionWords.length)];
+    let sentence = qWord;
+    for (let i = 0; i < Math.floor(Math.random() * (10 - 1) + 1); i += 1) {
+      const random = Math.floor(Math.random() * maxWord);
+      sentence += ` ${words[random]}`;
+    }
 
-  return `${sentence}?`;
+    return `${sentence}?`;
+  } catch (error) {
+    logger.info(`An error occurred a new sentence: ${error}`);
+    return undefined;
+  }
 }
 
 function setSentences() {
-  sentences = fs.existsSync(usedPath)
-    ? fs.readFileSync(usedPath, "utf8").split(",")
-    : [];
+  try {
+    sentences = fs.existsSync(usedPath)
+      ? fs.readFileSync(usedPath, "utf8").split(",")
+      : [];
+
+    logger.info(`Used sentences set.`);
+  } catch (error) {
+    logger.info(`Unable to set sentences: ${error}`);
+  }
 }
 
 function setNewSentences() {
   try {
     fs.writeFileSync(usedPath, sentences);
+    logger.info(`New used sentences saved.`);
   } catch (error) {
     logger.info("setNewSentences: ", error);
   }
@@ -154,8 +179,8 @@ async function setHeadersBing() {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
-        cookie: bingCookies,
-        origin: `${baseUrl}`,
+        cookie: cookies,
+        origin: baseUrl,
         referer: `${baseUrl}/?FORM=QBRE`,
         "user-agent": agentUserHeader
       },
@@ -165,6 +190,7 @@ async function setHeadersBing() {
     };
 
     await rp(options);
+    logger.info(`Bing hearders set.`);
   } catch (error) {
     logger.info("Error setHeadersBing: ", error);
   }
@@ -184,17 +210,19 @@ async function setRewardsHeader() {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
-        cookie: bingCookies,
-        origin: `${baseUrl}`,
+        cookie: cookies,
+        origin: baseUrl,
         referer: `${baseUrl}/?FORM=Z9FD1`,
         "user-agent": agentUserHeader
       },
       body: JSON.stringify({
-        url: "https://www.bing.com/",
+        url: baseUrl,
         V: "web"
       })
     };
+
     await rp(options);
+    logger.info(`Reward headers set.`);
   } catch (error) {
     logger.info("Error setRewardsHeader", error);
   }
@@ -222,8 +250,8 @@ async function makeSearchRequest(query) {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
-        cookie: bingCookies,
-        origin: `${baseUrl}`,
+        cookie: cookies,
+        origin: baseUrl,
         "user-agent": agentUserHeader,
         referer: `${baseUrl}/?FORM=QBRE`
       }
@@ -265,8 +293,8 @@ async function reportActivity(attributes, sentence, searchURI) {
         accept: "*/*",
         "accept-language": "en-US,en;q=0.9",
         "Content-Type": "application/x-www-form-urlencoded",
-        cookie: bingCookies,
-        origin: `${baseUrl}`,
+        cookie: cookies,
+        origin: baseUrl,
         referer: searchURI,
         "user-agent": agentUserHeader
       }
@@ -282,13 +310,14 @@ async function setup() {
   try {
     setAgent("mobile");
     setSentences();
-    await setCookies();
+    setCookies();
+
     await setGlobalAttributes();
     await setHeadersBing();
     await setRewardsHeader();
-    await run();
+    logger.info(`Application setup starting to run searches`);
   } catch (error) {
-    logger.info("Error", error);
+    logger.info("Error while running application setup!", error);
   }
 }
 
@@ -322,10 +351,9 @@ async function run() {
 
         await makeSearchRequest(sentence);
         logger.info(
-          `Mobile: ${userAgents.mobile.count}, 
-            Edge: ${userAgents.edge.count}, 
-            PC: ${userAgents.pc.count}, 
-          Total: ${dailyCount + 1}`
+          `Mobile: ${userAgents.mobile.count}, Edge: ${
+            userAgents.edge.count
+          }, PC: ${userAgents.pc.count}, Total: ${dailyCount + 1}`
         );
       }
     }, interval);
@@ -336,5 +364,6 @@ async function run() {
 
 module.exports = {
   setup,
-  logger
+  logger,
+  run
 };
