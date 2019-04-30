@@ -54,9 +54,8 @@ const dailyLimit =
   userAgents.mobile.limit + userAgents.pc.limit + userAgents.edge.limit;
 
 // Attributes
+const iid = "SERP.5065";
 let globals = {};
-let cvid;
-let iid;
 let cookies;
 let agentUserHeader;
 let sentences;
@@ -112,7 +111,16 @@ function getWindow(page) {
 }
 
 function getPageAttributes(window) {
-  return window._G;
+  try {
+    const attributes = window._G;
+
+    attributes.iid = window.data_iid;
+
+    return attributes;
+  } catch (error) {
+    logger.info(`Error getting page attributes: ${error}`);
+    return undefined;
+  }
 }
 
 async function setGlobalAttributes() {
@@ -166,14 +174,13 @@ function setNewSentences() {
 
 async function setHeadersBing() {
   try {
-    const uri = `/rewardsapp/ncheader`;
     const options = {
       method: "POST",
-      uri: `${baseUrl}${uri}`,
+      uri: `${baseUrl}/rewardsapp/ncheader`,
       qs: {
         ver: globals.AppVer,
-        IID: globals._iid,
-        IG: globals._IG
+        IID: globals.iid,
+        IG: globals.IG
       },
       headers: {
         accept: "*/*",
@@ -202,8 +209,8 @@ async function setRewardsHeader() {
       method: "POST",
       uri: `${baseUrl}/rewardsapp/reportActivity`,
       qs: {
-        IG: cvid,
-        IID: iid,
+        IG: globals.IG,
+        IID: globals.iid,
         src: "hp"
       },
       headers: {
@@ -234,7 +241,7 @@ async function makeSearchRequest(query) {
   try {
     const searchURI = `${baseUrl}/search`;
     const options = {
-      method: "POST",
+      method: "GET",
       uri: searchURI,
       qs: {
         q: sentence,
@@ -244,7 +251,7 @@ async function makeSearchRequest(query) {
         pq: sentence,
         sc: "8",
         sk: "",
-        cvid
+        cvid: globals.IG
       },
       headers: {
         accept: "*/*",
@@ -279,7 +286,7 @@ async function reportActivity(attributes, sentence, searchURI) {
       uri: `${baseUrl}/rewardsapp/reportActivity`,
       qs: {
         IG: attributes.IG,
-        IID: globals._iid,
+        IID: attributes.iid,
         q: sentence,
         qs: "n",
         form: "QBLH",
@@ -287,7 +294,7 @@ async function reportActivity(attributes, sentence, searchURI) {
         pq: sentence,
         sc: "8-4",
         sk: "",
-        cvid: globals._IG
+        cvid: globals.IG
       },
       headers: {
         accept: "*/*",
