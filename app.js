@@ -4,10 +4,6 @@ const fs = require("fs");
 const words = require("an-array-of-english-words");
 const dotenvExpand = require("dotenv-expand");
 const { createLogger, format, transports } = require("winston");
-const {
-  getChromeCookies,
-  updateChromeCookies
-} = require("./cookie-handler.js");
 
 dotenvExpand(require("dotenv").config());
 
@@ -54,7 +50,6 @@ const dailyLimit =
   userAgents.mobile.limit + userAgents.pc.limit + userAgents.edge.limit;
 
 // Attributes
-const iid = "SERP.5065";
 let globals = {};
 let cookies;
 let agentUserHeader;
@@ -76,13 +71,7 @@ async function getBingDotCom() {
 
 async function setCookies() {
   try {
-    if (process.env.MODE === "remote") {
-      cookies = fs.readFileSync(cookiePath, "utf8");
-    } else {
-      cookies = await getChromeCookies();
-
-      updateChromeCookies(cookies);
-    }
+    cookies = fs.readFileSync(cookiePath, "utf8");
   } catch (error) {
     logger.info("Error setCookies(): ", error);
   }
@@ -157,7 +146,7 @@ function setSentences() {
       ? fs.readFileSync(usedPath, "utf8").split(",")
       : [];
 
-    logger.info(`Used sentences set.`);
+    logger.info(`Used sentences set...`);
   } catch (error) {
     logger.info(`Unable to set sentences: ${error}`);
   }
@@ -197,7 +186,7 @@ async function setHeadersBing() {
     };
 
     await rp(options);
-    logger.info(`Bing hearders set.`);
+    logger.info(`Bing hearders set...`);
   } catch (error) {
     logger.info("Error setHeadersBing: ", error);
   }
@@ -229,7 +218,7 @@ async function setRewardsHeader() {
     };
 
     await rp(options);
-    logger.info(`Reward headers set.`);
+    logger.info(`Reward headers set...`);
   } catch (error) {
     logger.info("Error setRewardsHeader", error);
   }
@@ -322,7 +311,7 @@ async function setup() {
     await setGlobalAttributes();
     await setHeadersBing();
     await setRewardsHeader();
-    logger.info(`Application setup starting to run searches`);
+    logger.info(`Application setup starting to run searches...`);
   } catch (error) {
     logger.info("Error while running application setup!", error);
   }
