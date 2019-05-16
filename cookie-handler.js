@@ -3,6 +3,7 @@ const moment = require("moment");
 const tough = require("tough-cookie");
 const fs = require("fs");
 const dotenvExpand = require("dotenv-expand");
+const utf8 = require("utf8");
 
 dotenvExpand(require("dotenv").config());
 
@@ -14,14 +15,14 @@ const getCookies = promisify(chrome.getCookies);
 const baseUrl = process.env.BASE_URL;
 const configPath = process.env.CONFIG_PATH;
 const cookieName = process.env.COOKIE_NAME;
-const cookiePath = `${configPath}/${process.env.COOKIE_FILE_NAME}`;
+const cookiePath = `${configPath}/${cookieName}`;
 
 async function getChromeCookies() {
   try {
     const chromeCookies = await getCookies(baseUrl, "header");
 
-    if (!fs.existsSync(cookiePath)) {
-      return chromeCookies;
+    if (chromeCookies) {
+      return utf8.encode(chromeCookies);
     }
     return undefined;
   } catch (error) {
@@ -32,13 +33,13 @@ async function getChromeCookies() {
 
 async function updateChromeCookies() {
   try {
-    const currentCookies = await getCookies(baseUrl, "header");
+    const currentCookies = await getChromeCookies();
 
     if (!fs.existsSync(configPath)) {
       fs.mkdirSync(configPath);
     }
 
-    fs.writeFileSync(`${configPath}/${cookieName}`, currentCookies);
+    fs.writeFileSync(`${cookiePath}`, currentCookies);
     console.log("Cookies updated.");
   } catch (error) {
     console.log("Error updateNewCookies(): ", error);

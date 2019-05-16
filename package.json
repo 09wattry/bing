@@ -23,6 +23,7 @@
     "moment": "^2.24.0",
     "request-promise-native": "^1.0.7",
     "tough-cookie": "^3.0.1",
+    "utf8": "^3.0.0",
     "winston": "^3.2.1"
   },
   "devDependencies": {

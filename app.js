@@ -54,7 +54,6 @@ const dailyLimit =
   userAgents.mobile.limit + userAgents.pc.limit + userAgents.edge.limit;
 
 // Attributes
-const iid = "SERP.5065";
 let globals = {};
 let cookies;
 let agentUserHeader;
@@ -81,7 +80,7 @@ async function setCookies() {
     } else {
       cookies = await getChromeCookies();
 
-      updateChromeCookies(cookies);
+      updateChromeCookies();
     }
   } catch (error) {
     logger.info("Error setCookies(): ", error);
